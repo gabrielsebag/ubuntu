@@ -5,7 +5,7 @@ VAGRANT_BOX = 'bento/ubuntu-20.04'
 # Memorable name for your box
 VM_NAME = 'ubuntu'
 # VM User — 'vagrant' by default
-VM_USER = 'gabrielsebag'
+VM_USER = 'vagrant'
 # Username on your Mac
 MAC_USER = 'gabrielsebag'
 # Host folder to sync
