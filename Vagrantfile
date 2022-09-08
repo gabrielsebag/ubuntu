@@ -1,7 +1,7 @@
 # encoding: utf-8
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
-VAGRANT_BOX = 'bento/ubuntu-20.04'
+VAGRANT_BOX = 'bento/ubuntu-18.04'
 # Memorable name for your box
 VM_NAME = 'ubuntu'
 
@@ -13,7 +13,7 @@ MAC_USER = 'gabrielsebag'
 # Host folder to sync
 HOST_PATH = '/Users/gabrielsebag/Code'
 # Where to sync to on Guest — 'vagrant' is the default user name
-GUEST_PATH = '/vagrant'
+GUEST_PATH = '/home/vagrant'
 
 # # VM Port — uncomment this to use NAT instead of DHCP
 # VM_PORT = 8080
@@ -39,16 +39,22 @@ Vagrant.configure(2) do |config|
   # # Port forwarding — uncomment this to use NAT instead of DHCP
   # config.vm.network "forwarded_port", guest: 80, host: VM_PORT
 
-  # Sync folder
-  config.vm.synced_folder HOST_PATH, GUEST_PATH
   # Disable default Vagrant folder, use a unique path per project
   config.vm.synced_folder '.', '/home/'+VM_USER+'', disabled: true
+  # Sync folder
+  config.vm.synced_folder HOST_PATH, GUEST_PATH
 
   # Login to the guest path on ssh
   config.ssh.extra_args = ["-t", "cd "+GUEST_PATH+"; bash --login"]
 
   #Install package for your VM
   config.vm.provision "shell", inline: <<-SHELL
+    # DISK SIZE
+    # ------------------------------------------------------------------------------
+    sudo parted /dev/sda resizepart 1 100%
+    sudo pvresize /dev/sda1
+    sudo lvextend -r -l +100%FREE /dev/vagrant-vg/root
+
     # DOCKER
     # ------------------------------------------------------------------------------
     sudo apt-get update -y
