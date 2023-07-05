@@ -1,20 +1,17 @@
 # encoding: utf-8
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
-VAGRANT_BOX = 'bento/ubuntu-18.04'
+VAGRANT_BOX = 'bento/ubuntu-20.04'
 # Memorable name for your box
 VM_NAME = 'ubuntu'
-
 # VM User — 'vagrant' by default
 VM_USER = 'vagrant'
 # Username on your Mac
 MAC_USER = 'gabrielsebag'
-
 # Host folder to sync
 HOST_PATH = '/Users/gabrielsebag/Code'
 # Where to sync to on Guest — 'vagrant' is the default user name
 GUEST_PATH = '/home/vagrant'
-
 # # VM Port — uncomment this to use NAT instead of DHCP
 # VM_PORT = 8080
 
@@ -51,28 +48,29 @@ Vagrant.configure(2) do |config|
   config.vm.provision "shell", inline: <<-SHELL
     # DISK SIZE
     # ------------------------------------------------------------------------------
-    sudo parted /dev/sda resizepart 1 100%
-    sudo pvresize /dev/sda1
-    sudo lvextend -r -l +100%FREE /dev/vagrant-vg/root
+    # https://medium.com/@kanrangsan/how-to-automatically-resize-virtual-box-disk-with-vagrant-9f0f48aa46b3
+    sudo sgdisk /dev/sda -e
+    sudo parted /dev/sda resizepart 3 100%
+    sudo pvresize /dev/sda3
+    sudo lvextend -r -l +100%FREE /dev/ubuntu-vg/ubuntu-lv
+    sudo resize2fs -p /dev/mapper/ubuntu--vg-ubuntu--lv
 
     # DOCKER
     # ------------------------------------------------------------------------------
     sudo apt-get update -y
-    sudo apt-get install -y \
-      apt-transport-https \
-      ca-certificates \
-      curl \
-      software-properties-common
-    sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
-    sudo add-apt-repository \
-     "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
-     $(lsb_release -cs) \
-     stable"
+    sudo apt-get install -y ca-certificates curl gnupg
+    sudo install -m 0755 -d /etc/apt/keyrings
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+    sudo chmod a+r /etc/apt/keyrings/docker.gpg
+    echo \
+      "deb [arch="$(dpkg --print-architecture)" signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+      "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" | \
+      sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
     sudo apt-get update -y
-    sudo apt-get install -y docker-ce
-    sudo apt-get install -y docker-compose
-    sudo curl -L "https://github.com/docker/compose/releases/download/1.27.4/docker-compose-$(uname -s)-$(uname -m)" -o /usr/bin/docker-compose
-    sudo chmod +x /usr/bin/docker-compose
+    DOCKER_VERSION=5:23.0.6-1~ubuntu.20.04~focal
+    sudo apt-get install -y docker-ce=$DOCKER_VERSION docker-ce-cli=$DOCKER_VERSION containerd.io docker-buildx-plugin docker-compose-plugin
+    sudo ln -s /usr/libexec/docker/cli-plugins/docker-compose /usr/bin/docker-compose
+    sudo usermod -aG docker vagrant
 
     # MAKE
     # ------------------------------------------------------------------------------
