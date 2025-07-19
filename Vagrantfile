@@ -1,25 +1,29 @@
 # encoding: utf-8
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
-VAGRANT_BOX = 'bento/ubuntu-20.04'
+
+# VM Box
+VAGRANT_BOX = "bento/ubuntu-24.04"
 # Memorable name for your box
-VM_NAME = 'ubuntu'
-# VM User — 'vagrant' by default
-VM_USER = 'vagrant'
+VM_NAME = "ubuntu"
+# VM User — "vagrant" by default
+VM_USER = "vagrant"
 # Username on your Mac
-MAC_USER = 'gabrielsebag'
+MAC_USER = "gabrielsebag"
 # Host folder to sync
-HOST_PATH = '/Users/gabrielsebag/Code'
-# Where to sync to on Guest — 'vagrant' is the default user name
-GUEST_PATH = '/home/vagrant'
-# # VM Port — uncomment this to use NAT instead of DHCP
+HOST_PATH = "/Users/gabrielsebag/Code"
+# Where to sync to on Guest — "vagrant" is the default user name
+GUEST_PATH = "/home/vagrant"
+# VM Port — uncomment this to use NAT instead of DHCP
 # VM_PORT = 8080
 
 Vagrant.configure(2) do |config|
   # Vagrant box from Hashicorp
   config.vm.box = VAGRANT_BOX
+
   # Actual machine name
   config.vm.hostname = VM_NAME
+
   # Set VM name in Virtualbox
   config.vm.provider "virtualbox" do |v|
     v.name = VM_NAME
@@ -27,24 +31,24 @@ Vagrant.configure(2) do |config|
     v.cpus = 2
   end
 
-  # Set VM disk size
-  config.disksize.size = '100GB'
+  # Update disk size
+  config.vm.disk :disk, size: "100GB", primary: true
 
-  #DHCP — comment this out if planning on using NAT instead
-  #config.vm.network "private_network", type: "dhcp"
-  config.vm.network :forwarded_port, guest: 80, host: 80
-  # # Port forwarding — uncomment this to use NAT instead of DHCP
+  # DHCP — comment this out if planning on using NAT instead
+  # config.vm.network "private_network", type: "dhcp"
+  # Port forwarding — uncomment this to use NAT instead of DHCP
   # config.vm.network "forwarded_port", guest: 80, host: VM_PORT
+  config.vm.network :forwarded_port, guest: 80, host: 80
 
   # Disable default Vagrant folder, use a unique path per project
-  config.vm.synced_folder '.', '/home/'+VM_USER+'', disabled: true
+  config.vm.synced_folder ".", "/home/" + VM_USER + "", disabled: true
   # Sync folder
   config.vm.synced_folder HOST_PATH, GUEST_PATH
 
   # Login to the guest path on ssh
   config.ssh.extra_args = ["-t", "cd "+GUEST_PATH+"; bash --login"]
 
-  #Install package for your VM
+  #Install packages for your VM
   config.vm.provision "shell", inline: <<-SHELL
     # DISK SIZE
     # ------------------------------------------------------------------------------
@@ -54,6 +58,11 @@ Vagrant.configure(2) do |config|
     sudo pvresize /dev/sda3
     sudo lvextend -r -l +100%FREE /dev/ubuntu-vg/ubuntu-lv
     sudo resize2fs -p /dev/mapper/ubuntu--vg-ubuntu--lv
+
+    # PYTHON
+    # ------------------------------------------------------------------------------
+    sudo apt-get update -y
+    sudo apt-get install -y python3-pyflakes
 
     # DOCKER
     # ------------------------------------------------------------------------------
@@ -67,19 +76,9 @@ Vagrant.configure(2) do |config|
       "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" | \
       sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
     sudo apt-get update -y
-    DOCKER_VERSION=5:23.0.6-1~ubuntu.20.04~focal
+    DOCKER_VERSION=5:27.5.1-1~ubuntu.24.04~noble
     sudo apt-get install -y docker-ce=$DOCKER_VERSION docker-ce-cli=$DOCKER_VERSION containerd.io docker-buildx-plugin docker-compose-plugin
     sudo ln -s /usr/libexec/docker/cli-plugins/docker-compose /usr/bin/docker-compose
     sudo usermod -aG docker vagrant
-
-    # MAKE
-    # ------------------------------------------------------------------------------
-    sudo apt-get install -y make
-
-    # NODE
-    # ------------------------------------------------------------------------------
-    sudo curl -sL https://deb.nodesource.com/setup_16.x | sudo -E bash -
-    sudo apt-get update -y
-    sudo apt-get install -y nodejs
   SHELL
 end
